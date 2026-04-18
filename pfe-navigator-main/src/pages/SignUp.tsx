@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
-import { ArrowRight, GraduationCap, UserPlus, Mail, Lock, User } from "lucide-react";
+import { ArrowRight, GraduationCap, UserPlus, Mail, Lock, User, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/context/auth";
 
 export default function SignUp() {
@@ -13,8 +14,12 @@ export default function SignUp() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(true);
 
   if (user) {
     return <Navigate to="/dashboard" replace />;
@@ -24,6 +29,24 @@ export default function SignUp() {
     event.preventDefault();
     setError("");
     setLoading(true);
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      setLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      setLoading(false);
+      return;
+    }
+
+    if (!acceptTerms) {
+      setError("Please accept the terms to continue.");
+      setLoading(false);
+      return;
+    }
 
     try {
       await signUp(name, email, password);
@@ -70,9 +93,55 @@ export default function SignUp() {
                   <Label htmlFor="password">Password</Label>
                   <div className="relative">
                     <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="password" type="password" className="pl-9" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      className="px-9"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((current) => !current)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Use at least 6 characters to create a strong password.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm password</Label>
+                  <div className="relative">
+                    <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      className="px-9"
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((current) => !current)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
+
+                <label htmlFor="terms" className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+                  <Checkbox id="terms" checked={acceptTerms} onCheckedChange={(checked) => setAcceptTerms(checked === true)} />
+                  I agree to the Terms and Privacy policy.
+                </label>
 
                 {error ? <p className="rounded-lg bg-destructive-soft px-3 py-2 text-sm text-destructive">{error}</p> : null}
 
@@ -85,6 +154,14 @@ export default function SignUp() {
               <p className="text-center text-sm text-muted-foreground">
                 Already have an account? <Link to="/signin" className="font-medium text-accent hover:underline">Sign in</Link>
               </p>
+
+              <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                <p className="flex items-center gap-1.5 font-medium text-foreground">
+                  <ShieldCheck className="h-3.5 w-3.5 text-success" />
+                  UX-first demo mode
+                </p>
+                <p className="mt-1">Account data stays in your local browser for prototype testing.</p>
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -8,9 +8,11 @@ import { RequireAuth } from "@/components/RequireAuth";
 import Index from "./pages/Index.tsx";
 import SignIn from "./pages/SignIn.tsx";
 import SignUp from "./pages/SignUp.tsx";
+import Universities from "./pages/Universities.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import Diagnosis from "./pages/Diagnosis.tsx";
 import Pfe from "./pages/Pfe.tsx";
+import SettingsPage from "./pages/Settings.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/universities" element={<Universities />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
             <Route
@@ -47,6 +50,14 @@ const App = () => (
               element={
                 <RequireAuth>
                   <Pfe />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <RequireAuth>
+                  <SettingsPage />
                 </RequireAuth>
               }
             />

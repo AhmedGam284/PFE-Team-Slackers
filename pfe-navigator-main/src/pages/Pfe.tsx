@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Award, Building2, CheckCircle2, Circle, ExternalLink, Heart, MapPin, Mail, MessageSquare, Activity } from "lucide-react";
+import { studentJourney } from "@/lib/studentJourney";
 
 const milestones = [
   { title: "Project charter approved", done: true },
@@ -34,6 +35,8 @@ const companies = [
 export default function Pfe() {
   const completed = milestones.filter((m) => m.done).length;
   const pct = Math.round((completed / milestones.length) * 100);
+  const topTrack = studentJourney.topicSuggestions[0];
+  const mentor = studentJourney.assignedMentor;
 
   return (
     <AppLayout>
@@ -42,8 +45,8 @@ export default function Pfe() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-accent">Project · 2025/2026</p>
-            <h1 className="mt-1 text-2xl font-bold text-foreground md:text-3xl">Adaptive Learning Paths with AI</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Tracking your final-year project in real time.</p>
+            <h1 className="mt-1 text-2xl font-bold text-foreground md:text-3xl">{topTrack.title}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Recommended from your full academic run · Fit {topTrack.fit}%</p>
           </div>
           <div className="flex items-center gap-3 rounded-2xl border border-success/30 bg-success/10 px-4 py-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-success text-success-foreground">
@@ -103,12 +106,12 @@ export default function Pfe() {
             <CardContent>
               <div className="flex items-center gap-3">
                 <Avatar className="h-14 w-14">
-                  <AvatarFallback className="bg-gradient-accent text-base text-accent-foreground">DK</AvatarFallback>
+                  <AvatarFallback className="bg-gradient-accent text-base text-accent-foreground">{mentor.initials}</AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <p className="font-semibold text-foreground">Dr. Karim Belhaj</p>
+                  <p className="font-semibold text-foreground">{mentor.name}</p>
                   <p className="text-xs text-muted-foreground">Faculty of Engineering</p>
-                  <p className="text-xs text-muted-foreground">AI · NLP · Education</p>
+                  <p className="text-xs text-muted-foreground">{mentor.specialty}</p>
                 </div>
               </div>
               <div className="mt-4 space-y-2 rounded-xl bg-muted/50 p-3 text-xs">
@@ -118,11 +121,11 @@ export default function Pfe() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Next meeting</span>
-                  <span className="font-medium text-foreground">Tomorrow · 14:00</span>
+                  <span className="font-medium text-foreground">{mentor.nextSlot}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Feedback rating</span>
-                  <span className="font-medium text-success">★ 4.9</span>
+                  <span className="text-muted-foreground">Fit score</span>
+                  <span className="font-medium text-success">{mentor.fit}%</span>
                 </div>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">

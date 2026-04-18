@@ -79,9 +79,11 @@ export function AppSidebar() {
             </div>
           ) : null}
           <SidebarMenuItem>
-            <SidebarMenuButton className="text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground">
-              <Settings className="h-4 w-4" />
-              {!collapsed && <span>Settings</span>}
+            <SidebarMenuButton asChild>
+              <NavLink to="/settings" className={getCls("/settings")}>
+                <Settings className="h-4 w-4" />
+                {!collapsed && <span>Settings</span>}
+              </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

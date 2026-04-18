@@ -48,7 +48,7 @@ export default function Landing() {
           <nav className="hidden items-center gap-8 md:flex">
             <a href="#features" className="text-sm text-muted-foreground transition-smooth hover:text-foreground">Features</a>
             <a href="#journey" className="text-sm text-muted-foreground transition-smooth hover:text-foreground">Journey</a>
-            <a href="#" className="text-sm text-muted-foreground transition-smooth hover:text-foreground">For universities</a>
+            <Link to="/universities" className="text-sm text-muted-foreground transition-smooth hover:text-foreground">For universities</Link>
           </nav>
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" className="hidden border-border bg-background/70 md:inline-flex">

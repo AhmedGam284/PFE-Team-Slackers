@@ -5,39 +5,60 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Brain, Lightbulb, Sparkles, TrendingUp, BookOpen, Code2, MessagesSquare, ClipboardList } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
+import { studentJourney } from "@/lib/studentJourney";
 
 const skills = [
-  { name: "Technical level", value: 82, icon: Code2, desc: "Strong programming, weaker on system design." },
-  { name: "Research skills", value: 64, icon: BookOpen, desc: "Solid reading, needs methodology depth." },
-  { name: "Communication", value: 78, icon: MessagesSquare, desc: "Clear writing & presentations." },
-  { name: "Project planning", value: 71, icon: ClipboardList, desc: "Good roadmaps, improve risk handling." },
+  {
+    name: "Technical level",
+    value: studentJourney.domainScores.software,
+    icon: Code2,
+    desc: "Built from Year 1 foundations through senior-year engineering modules.",
+  },
+  {
+    name: "Research skills",
+    value: studentJourney.domainScores.research,
+    icon: BookOpen,
+    desc: "Estimated from cumulative reports, literature work, and evaluation quality.",
+  },
+  {
+    name: "Communication",
+    value: studentJourney.domainScores.communication,
+    icon: MessagesSquare,
+    desc: "Reflects presentation quality and mentor feedback across all years.",
+  },
+  {
+    name: "Project planning",
+    value: studentJourney.domainScores.project,
+    icon: ClipboardList,
+    desc: "Combines planning reliability, milestone consistency, and leadership signals.",
+  },
 ];
 
 const radarData = [
-  { skill: "Technical", value: 82, full: 100 },
-  { skill: "Research", value: 64, full: 100 },
-  { skill: "Comms", value: 78, full: 100 },
-  { skill: "Planning", value: 71, full: 100 },
-  { skill: "Creativity", value: 85, full: 100 },
-  { skill: "Teamwork", value: 76, full: 100 },
+  { skill: "Technical", value: studentJourney.domainScores.software, full: 82 },
+  { skill: "Research", value: studentJourney.domainScores.research, full: 78 },
+  { skill: "Comms", value: studentJourney.domainScores.communication, full: 80 },
+  { skill: "Planning", value: studentJourney.domainScores.project, full: 79 },
+  { skill: "AI", value: studentJourney.domainScores.ai, full: 81 },
+  { skill: "Consistency", value: studentJourney.consistencyIndex, full: 84 },
 ];
 
 const recommendations = [
   {
-    title: "Strengthen research methodology",
-    desc: "Take the 'Academic Research Methods' module — adds ~12 pts to readiness.",
+    title: "Reinforce weakest domain this month",
+    desc: "Prioritize research methodology to boost your readiness score trend before defense.",
     tag: "Priority",
     tagColor: "destructive",
   },
   {
-    title: "Build a portfolio project in MLOps",
-    desc: "Aligns with 3 of your suggested PFE topics and 18 partner companies.",
+    title: `Top PFE direction: ${studentJourney.topicSuggestions[0].title}`,
+    desc: `Fit score ${studentJourney.topicSuggestions[0].fit}% based on your Year 1-to-PFE trajectory.`,
     tag: "Career boost",
     tagColor: "accent",
   },
   {
-    title: "Join a study group on system design",
-    desc: "Closes the gap with peers in your cohort. 4 groups available this week.",
+    title: `Recommended mentor: ${studentJourney.assignedMentor.name}`,
+    desc: `Mentor fit ${studentJourney.assignedMentor.fit}% from expertise alignment and availability.`,
     tag: "Quick win",
     tagColor: "info",
   },
@@ -55,7 +76,7 @@ export default function Diagnosis() {
               <span className="text-sm font-semibold uppercase tracking-wider text-accent">AI Diagnosis</span>
             </div>
             <h1 className="mt-1 text-2xl font-bold text-foreground md:text-3xl">Your skill profile</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Last evaluated 2 days ago · Based on 14 signals</p>
+            <p className="mt-1 text-sm text-muted-foreground">Evaluated from cumulative performance across Year 1, Year 2, Senior Year, and PFE</p>
           </div>
           <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
             <Sparkles className="mr-2 h-4 w-4" /> Re-run diagnosis
@@ -68,17 +89,17 @@ export default function Diagnosis() {
             <CardContent className="p-6">
               <p className="text-sm opacity-80">Overall AI score</p>
               <div className="mt-2 flex items-baseline gap-2">
-                <p className="text-5xl font-bold">76</p>
+                <p className="text-5xl font-bold">{studentJourney.readinessScore}</p>
                 <span className="text-lg opacity-60">/ 100</span>
               </div>
-              <Badge className="mt-3 border-0 bg-accent text-accent-foreground">Above cohort avg</Badge>
+              <Badge className="mt-3 border-0 bg-accent text-accent-foreground">{studentJourney.readinessLevel} level</Badge>
               <div className="mt-6 space-y-3">
                 <div className="flex items-center gap-2 text-sm">
                   <TrendingUp className="h-4 w-4 text-accent" />
-                  <span className="opacity-90">+8 points since last month</span>
+                  <span className="opacity-90">+{studentJourney.scoreTrend} points since Year 1 baseline</span>
                 </div>
                 <div className="rounded-xl bg-white/10 p-3 text-sm backdrop-blur-sm">
-                  💡 You rank in the <strong>top 28%</strong> of your cohort. One focused improvement can push you into the top 10%.
+                  Your academic average is <strong>{studentJourney.academicAverage20}/20</strong> with consistency index <strong>{studentJourney.consistencyIndex}%</strong>.
                 </div>
               </div>
             </CardContent>
