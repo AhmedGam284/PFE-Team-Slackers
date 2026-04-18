@@ -9,6 +9,7 @@ type AuthContextValue = {
   user: User | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
+  updateProfile: (nextUser: User, previousEmail?: string) => void;
   signOut: () => void;
 };
 
@@ -103,6 +104,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const session = { name: nextUser.name, email: nextUser.email };
         setUser(session);
         window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+      },
+      updateProfile: (nextUser, previousEmail) => {
+        setUser(nextUser);
+        window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextUser));
+
+        const users = getStoredUsers();
+        const previousEmailNormalized = previousEmail?.trim().toLowerCase();
+        const nextEmailNormalized = nextUser.email.trim().toLowerCase();
+        const nextUsers = users.map((candidate) =>
+          candidate.email.toLowerCase() === previousEmailNormalized || candidate.email.toLowerCase() === nextEmailNormalized
+            ? { ...candidate, name: nextUser.name, email: nextUser.email }
+            : candidate,
+        );
+
+        saveStoredUsers(nextUsers);
       },
       signOut: () => {
         setUser(null);
