@@ -1,0 +1,13 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "npm run dev": true,
+        "/^Set-Location \"c:\\\\Users\\\\Lenovo\\\\OneDrive\\\\Bureau\\\\Hackthon\\\\PFE-Team-Slackers\\\\pfe-navigator-main\"; npm\\.cmd run dev -- --host 0\\.0\\.0\\.0$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^Set-Location \"c:\\\\Users\\\\Lenovo\\\\OneDrive\\\\Bureau\\\\Hackthon\\\\PFE-Team-Slackers\\\\pfe-navigator-main\"; npm\\.cmd install$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
