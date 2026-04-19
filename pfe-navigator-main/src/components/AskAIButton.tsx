@@ -2,9 +2,12 @@ import { Sparkles, X, Send } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/context/auth";
 
 export function AskAIButton() {
   const [open, setOpen] = useState(false);
+  const { user } = useAuth();
+  const firstName = user?.name?.split(" ")[0] ?? "there";
 
   return (
     <>
@@ -26,7 +29,7 @@ export function AskAIButton() {
           </div>
           <div className="space-y-3 p-4">
             <div className="rounded-2xl rounded-tl-sm bg-muted p-3 text-sm text-foreground">
-              👋 Hi Sara! Based on your diagnosis, I recommend strengthening your <strong>research methodology</strong> next. Want me to suggest 3 PFE topics?
+              👋 Hi {firstName}! Based on your diagnosis, I recommend strengthening your <strong>research methodology</strong> next. Want me to suggest 3 PFE topics?
             </div>
             <div className="flex flex-wrap gap-1.5">
               <button className="rounded-full border border-border bg-background px-3 py-1 text-xs hover:border-accent hover:text-accent">Suggest topics</button>

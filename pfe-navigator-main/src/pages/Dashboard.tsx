@@ -41,7 +41,9 @@ export default function Dashboard() {
         {/* Welcome */}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground md:text-3xl">Welcome back, Sara 👋</h1>
+            <h1 className="text-2xl font-bold text-foreground md:text-3xl">
+              Welcome back{user?.name ? `, ${user.name}` : ""} 👋
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Tracking from Year 1 to PFE with a unified academic score and mentor guidance.
             </p>

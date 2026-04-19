@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Brain, Target, Building2, ArrowRight, Sparkles, GraduationCap, ClipboardCheck, Users, Award, Briefcase, UserCheck, CheckCircle2, LogIn, UserPlus } from "lucide-react";
 import heroImage from "@/assets/hero-pfe.jpg";
+import { useAuth } from "@/context/auth";
 
 const features = [
   {
@@ -34,6 +36,16 @@ const journey = [
 ];
 
 export default function Landing() {
+  const { user } = useAuth();
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "SA";
+
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
@@ -50,14 +62,28 @@ export default function Landing() {
             <a href="#journey" className="text-sm text-muted-foreground transition-smooth hover:text-foreground">Journey</a>
             <Link to="/universities" className="text-sm text-muted-foreground transition-smooth hover:text-foreground">For universities</Link>
           </nav>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" className="hidden border-border bg-background/70 md:inline-flex">
-              <Link to="/signin"><LogIn className="mr-1.5 h-4 w-4" />Sign in</Link>
+          {user ? (
+            <Button asChild variant="ghost" className="h-auto rounded-full p-0 hover:bg-transparent">
+              <Link to="/profile" className="flex items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-3 shadow-sm">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-gradient-primary text-xs text-primary-foreground">{initials}</AvatarFallback>
+                </Avatar>
+                <div className="hidden text-left sm:block">
+                  <p className="text-xs font-semibold leading-tight text-foreground">{user.name}</p>
+                  <p className="text-[10px] leading-tight text-muted-foreground">{user.role}</p>
+                </div>
+              </Link>
             </Button>
-            <Button asChild className="bg-primary text-primary-foreground hover:bg-primary-glow">
-              <Link to="/signup"><UserPlus className="mr-1.5 h-4 w-4" />Sign up</Link>
-            </Button>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline" className="hidden border-border bg-background/70 md:inline-flex">
+                <Link to="/signin"><LogIn className="mr-1.5 h-4 w-4" />Sign in</Link>
+              </Button>
+              <Button asChild className="bg-primary text-primary-foreground hover:bg-primary-glow">
+                <Link to="/signup"><UserPlus className="mr-1.5 h-4 w-4" />Sign up</Link>
+              </Button>
+            </div>
+          )}
         </div>
       </header>
 

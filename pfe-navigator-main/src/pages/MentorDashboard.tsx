@@ -27,7 +27,7 @@ export default function MentorDashboard() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-accent">Mentor dashboard</p>
-            <h1 className="mt-1 text-2xl font-bold text-foreground md:text-3xl">Welcome, {user?.name}</h1>
+            <h1 className="mt-1 text-2xl font-bold text-foreground md:text-3xl">Welcome, {user?.name ?? "mentor"}</h1>
             <p className="mt-1 text-sm text-muted-foreground">Review mentees, track readiness, and keep PFE guidance aligned.</p>
           </div>
           <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
