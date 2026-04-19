@@ -9,5 +9,13 @@
             "approve": true,
             "matchCommandLine": true
         }
+    },
+    "typescript.tsserver.experimental.enableProjectDiagnostics": false,
+    "javascript.tsserver.experimental.enableProjectDiagnostics": false,
+    "files.exclude": {
+        "**/node_modules/**": true
+    },
+    "search.exclude": {
+        "**/node_modules/**": true
     }
 }

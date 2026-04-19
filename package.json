@@ -1,0 +1,14 @@
+{
+  "name": "pfe-team-slackers",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail -n back,front -c green,cyan \"npm:dev:back\" \"npm:dev:front\"",
+    "dev:back": "npm --prefix back run dev",
+    "dev:front": "npm --prefix pfe-navigator-main run dev",
+    "build": "npm --prefix back run build && npm --prefix pfe-navigator-main run build",
+    "start": "npm --prefix back run start"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}
