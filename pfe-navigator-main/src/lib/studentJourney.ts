@@ -1,5 +1,14 @@
 export type DomainKey = "ai" | "software" | "research" | "communication" | "project";
 
+export type MentorProfile = {
+  name: string;
+  specialty: string;
+  initials: string;
+  expertise: DomainKey[];
+  availability: "High" | "Medium";
+  nextSlot: string;
+};
+
 type AcademicStage = {
   id: string;
   label: string;
@@ -8,15 +17,6 @@ type AcademicStage = {
   gpa20: number;
   highlights: string[];
   domainScores: Record<DomainKey, number>;
-};
-
-type MentorProfile = {
-  name: string;
-  specialty: string;
-  initials: string;
-  expertise: DomainKey[];
-  availability: "High" | "Medium";
-  nextSlot: string;
 };
 
 type TopicProfile = {
@@ -208,3 +208,7 @@ export const studentJourney = {
   mentorRanking,
   assignedMentor: mentorRanking[0],
 };
+
+export const getAssignedSupervisor = (): MentorProfile => studentJourney.assignedMentor;
+
+export const getAssignedSupervisorName = (): string => getAssignedSupervisor().name;

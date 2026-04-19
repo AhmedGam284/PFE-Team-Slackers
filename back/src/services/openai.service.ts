@@ -1,4 +1,3 @@
-import OpenAI from "openai";
 import { z } from "zod";
 import { env } from "../utils/env.js";
 import { buildDiagnosisPrompt, buildMentorChatPrompt, buildProgressPrompt } from "./promptBuilders.js";
@@ -38,16 +37,16 @@ const mentorChatOutputSchema = z.object({
 });
 
 export class OpenAIService {
-  private client?: OpenAI;
+  private apiKey?: string;
+  private model: string;
 
   constructor() {
-    if (env.OPENAI_API_KEY) {
-      this.client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
-    }
+    this.apiKey = env.GEMINI_API_KEY ?? env.OPENAI_API_KEY;
+    this.model = env.GEMINI_MODEL ?? env.OPENAI_MODEL;
   }
 
   isEnabled() {
-    return Boolean(this.client);
+    return Boolean(this.apiKey);
   }
 
   private async askForJson<T>(params: {
@@ -56,21 +55,46 @@ export class OpenAIService {
     outputSchema: z.ZodSchema<T>;
     fallback: () => T;
   }): Promise<T> {
-    if (!this.client) {
-      throw new Error("OpenAI is not configured");
+    if (!this.apiKey) {
+      throw new Error("Gemini is not configured");
     }
 
-    const completion = await this.client.chat.completions.create({
-      model: env.OPENAI_MODEL,
-      temperature: 0.2,
-      messages: [
-        { role: "system", content: params.system },
-        { role: "user", content: params.user },
-      ],
-      response_format: { type: "json_object" },
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: params.system }],
+          },
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: params.user }],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            responseMimeType: "application/json",
+          },
+        }),
+      },
+    );
 
-    const content = completion.choices[0]?.message?.content;
+    if (!response.ok) {
+      return params.fallback();
+    }
+
+    const payload = (await response.json()) as {
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+      }>;
+    };
+
+    const content = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("");
     if (!content) {
       return params.fallback();
     }

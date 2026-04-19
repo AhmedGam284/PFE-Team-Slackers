@@ -19,6 +19,8 @@ const envSchema = z.object({
         "http://127.0.0.1:5173",
       ].join(",")
     ),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().optional().default("gemini-1.5-flash"),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().optional().default("gpt-4.1-mini"),
 });

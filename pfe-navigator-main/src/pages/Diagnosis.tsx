@@ -121,6 +121,57 @@ const recommendations = [
   },
 ];
 
+const buildLocalDiagnosis = (payload: DiagnosisAnalyzeRequest): DiagnosisAnalyzeData => {
+  const skillCount = payload.skills.length;
+  const interestCount = payload.interests.length;
+  const goalCount = payload.careerGoals.length;
+  const notesCount = payload.notes?.trim().length ? 1 : 0;
+
+  const readinessScore = clamp(
+    50 + skillCount * 4 + interestCount * 3 + goalCount * 2 + notesCount * 2,
+  );
+
+  const strengths = [
+    ...(payload.skills.slice(0, 3).length ? payload.skills.slice(0, 3) : [payload.specialization]),
+    payload.academicLevel,
+  ].filter(Boolean);
+
+  const skillGaps = [
+    ...(skillCount < 4 ? ["Technical depth"] : []),
+    ...(interestCount < 3 ? ["Research focus"] : []),
+    ...(goalCount < 2 ? ["Project framing"] : []),
+  ].slice(0, 5);
+
+  const recommendedPfeTracks = [
+    {
+      title: `Applied ${payload.specialization || "engineering"}`,
+      reason: `Matches your ${payload.academicLevel} profile and current skills.`,
+      matchScore: clamp(readinessScore + 8),
+    },
+    {
+      title: "Student productivity assistant",
+      reason: "A practical track for a demoable MVP with clear value.",
+      matchScore: clamp(readinessScore + 3),
+    },
+  ];
+
+  const recommendedNextSteps = [
+    "Pick one clear problem statement",
+    "Turn your first milestone into a demoable feature",
+    "Review progress weekly with your supervisor",
+  ];
+
+  return {
+    readinessScore,
+    strengths,
+    skillGaps,
+    recommendedPfeTracks,
+    recommendedNextSteps,
+    mentorAdvice:
+      "Keep the scope small, ship one visible feature early, and use the diagnosis output to guide your next week.",
+  };
+};
+
 export default function Diagnosis() {
   const { user } = useAuth();
   const [aiDiagnosis, setAiDiagnosis] = useState<DiagnosisAnalyzeData | null>(null);
@@ -271,7 +322,10 @@ export default function Diagnosis() {
       setAiDiagnosis(result);
       saveToStorage(DIAGNOSIS_STORAGE_KEY, result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Diagnosis failed. Please try again.");
+      const fallback = buildLocalDiagnosis(payload);
+      setAiDiagnosis(fallback);
+      saveToStorage(DIAGNOSIS_STORAGE_KEY, fallback);
+      setError(null);
     } finally {
       setIsRunning(false);
     }

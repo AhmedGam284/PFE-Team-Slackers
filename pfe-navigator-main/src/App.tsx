@@ -11,8 +11,10 @@ import SignIn from "./pages/SignIn.tsx";
 import SignUp from "./pages/SignUp.tsx";
 import Universities from "./pages/Universities.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
+import AIAgent from "./pages/AIAgent.tsx";
 import Diagnosis from "./pages/Diagnosis.tsx";
 import Pfe from "./pages/Pfe.tsx";
+import MentorHub from "./pages/MentorHub.tsx";
 import SettingsPage from "./pages/Settings.tsx";
 import Profile from "./pages/Profile.tsx";
 import MentorDashboard from "./pages/MentorDashboard.tsx";
@@ -42,6 +44,14 @@ const App = () => (
                 }
               />
               <Route
+                path="/ai-agent"
+                element={
+                  <RequireAuth>
+                    <AIAgent />
+                  </RequireAuth>
+                }
+              />
+              <Route
                 path="/mentor-dashboard"
                 element={
                   <RequireAuth>
@@ -62,6 +72,14 @@ const App = () => (
                 element={
                   <RequireAuth>
                     <Pfe />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/mentor-hub"
+                element={
+                  <RequireAuth>
+                    <MentorHub />
                   </RequireAuth>
                 }
               />

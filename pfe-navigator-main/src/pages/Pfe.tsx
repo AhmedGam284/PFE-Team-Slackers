@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,26 +16,65 @@ import {
   ExternalLink,
   Heart,
   Loader2,
-  Mail,
   MapPin,
-  MessageSquare,
 } from "lucide-react";
 import { studentJourney } from "@/lib/studentJourney";
 import { useEffect, useMemo, useState } from "react";
 import type { DiagnosisAnalyzeData, PfeProgressFeedbackData, PfeProjectIdea, PfeProgressRequest } from "@/lib/apiContracts";
 import { getPfeProjects, submitPfeProgress } from "@/lib/pfeApi";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
+import { useToast } from "@/hooks/use-toast";
 
 const DIAGNOSIS_STORAGE_KEY = "pfe-compass-diagnosis";
 const PFE_PROGRESS_STORAGE_KEY = "pfe-compass-pfe-progress";
+const PFE_SAVED_PROJECTS_KEY = "pfe-compass-saved-projects";
 
-const milestones = [
-  { title: "Project charter approved", done: true },
-  { title: "Literature review complete", done: true },
-  { title: "Methodology defined", done: true },
-  { title: "Prototype v1 implementation", done: false, current: true },
-  { title: "User testing & evaluation", done: false },
-  { title: "Final report & defense", done: false },
+type MilestoneStatus = "not-started" | "in-progress" | "finished";
+
+type Milestone = {
+  step: number;
+  title: string;
+  direction: string;
+  status: MilestoneStatus;
+};
+
+const initialMilestones: Milestone[] = [
+  {
+    step: 1,
+    title: "Project charter approved",
+    direction: "Confirm scope, stakeholders, and success criteria before moving to research work.",
+    status: "finished",
+  },
+  {
+    step: 2,
+    title: "Literature review complete",
+    direction: "Keep the review tight and tie each source back to your problem statement.",
+    status: "finished",
+  },
+  {
+    step: 3,
+    title: "Methodology defined",
+    direction: "Lock the evaluation method now so the prototype stays measurable.",
+    status: "finished",
+  },
+  {
+    step: 4,
+    title: "Prototype v1 implementation",
+    direction: "Ship one usable slice first, then expand features once the core flow is stable.",
+    status: "in-progress",
+  },
+  {
+    step: 5,
+    title: "User testing & evaluation",
+    direction: "Plan feedback sessions early so testing criteria are ready when the prototype lands.",
+    status: "not-started",
+  },
+  {
+    step: 6,
+    title: "Final report & defense",
+    direction: "Reserve time for evidence, results, and a clean demo narrative.",
+    status: "not-started",
+  },
 ];
 
 const skillBadges = [
@@ -113,14 +151,66 @@ const computeStableMatch = (seed: string, readinessScore: number) => {
   return clamp(base + jitter, 55, 98);
 };
 
+const nextMilestoneStatus: Record<MilestoneStatus, MilestoneStatus> = {
+  "not-started": "in-progress",
+  "in-progress": "finished",
+  finished: "not-started",
+};
+
+const milestoneStatusLabel: Record<MilestoneStatus, string> = {
+  "not-started": "Not started",
+  "in-progress": "In progress",
+  finished: "Finished",
+};
+
+const milestoneStatusStyles: Record<MilestoneStatus, string> = {
+  "not-started": "border-border bg-background text-muted-foreground",
+  "in-progress": "border-accent/30 bg-accent-soft/50 text-accent",
+  finished: "border-success/30 bg-success/10 text-success",
+};
+
+const isMilestoneUnlocked = (milestonesList: Milestone[], index: number) =>
+  index === 0 || milestonesList.slice(0, index).every((milestone) => milestone.status === "finished");
+
+const buildLocalProgressFeedback = (input: PfeProgressRequest): PfeProgressFeedbackData => {
+  const completedCount = input.completedTasks.length;
+  const blockerCount = input.blockers.length;
+
+  const riskLevel: PfeProgressFeedbackData["riskLevel"] =
+    blockerCount >= 3 ? "high" : blockerCount >= 1 ? "medium" : "low";
+
+  const progressAssessment =
+    completedCount > 0
+      ? `You completed ${completedCount} task(s) and you’re moving forward.`
+      : "No completed tasks reported yet - try to ship a small increment this week.";
+
+  const mentorFeedback =
+    riskLevel === "high"
+      ? "You have multiple blockers - prioritize unblocking work, reduce scope, and ask for help early."
+      : riskLevel === "medium"
+        ? "You’re progressing, but address blockers quickly to avoid slipping the timeline."
+        : "Good momentum - keep delivering small, testable milestones.";
+
+  const recommendedActions = [
+    ...(blockerCount ? ["Turn each blocker into a concrete question and assign an owner"] : []),
+    "Define the next milestone as a demoable feature",
+    "Review your plan for the next 7 days",
+  ];
+
+  return {
+    progressAssessment,
+    riskLevel,
+    mentorFeedback,
+    recommendedActions,
+  };
+};
+
 export default function Pfe() {
-  const completed = milestones.filter((m) => m.done).length;
-  const pct = Math.round((completed / milestones.length) * 100);
-  const mentor = studentJourney.assignedMentor;
+  const { toast } = useToast();
+  const [milestones, setMilestones] = useState<Milestone[]>(initialMilestones);
 
   const [savedDiagnosis, setSavedDiagnosis] = useState<DiagnosisAnalyzeData | null>(null);
   const [projects, setProjects] = useState<PfeProjectIdea[]>([]);
-  const [projectsError, setProjectsError] = useState<string | null>(null);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
 
   const [feedback, setFeedback] = useState<PfeProgressFeedbackData | null>(null);
@@ -139,6 +229,18 @@ export default function Pfe() {
   const [blockersText, setBlockersText] = useState("");
   const [nextGoalsText, setNextGoalsText] = useState("");
   const [notes, setNotes] = useState("");
+  const [selectedMilestoneIndex, setSelectedMilestoneIndex] = useState(
+    initialMilestones.findIndex((milestone) => milestone.status === "in-progress"),
+  );
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [savedProjectIds, setSavedProjectIds] = useState<string[]>(() => {
+    const stored = loadFromStorage<unknown>(PFE_SAVED_PROJECTS_KEY, {
+      validate: isStringArray,
+      removeIfInvalid: true,
+    });
+
+    return stored ?? [];
+  });
 
   useEffect(() => {
     setSavedDiagnosis(
@@ -164,15 +266,12 @@ export default function Pfe() {
     let cancelled = false;
 
     const run = async () => {
-      setProjectsError(null);
       setIsLoadingProjects(true);
       try {
         const data = await getPfeProjects();
         if (!cancelled) setProjects(data);
-      } catch (err) {
-        if (!cancelled) {
-          setProjectsError(err instanceof Error ? err.message : "Failed to load project ideas.");
-        }
+      } catch {
+        if (!cancelled) setProjects([]);
       } finally {
         if (!cancelled) setIsLoadingProjects(false);
       }
@@ -183,6 +282,20 @@ export default function Pfe() {
       cancelled = true;
     };
   }, []);
+
+  const reloadProjects = async () => {
+    setProjectsError(null);
+    setIsLoadingProjects(true);
+    try {
+      const data = await getPfeProjects();
+      setProjects(data);
+      toast({ title: "Projects refreshed", description: "Suggested projects were reloaded from the backend." });
+    } catch {
+      toast({ title: "Using demo projects", description: "Backend projects were unavailable, so demo suggestions are shown." });
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  };
 
   const projectCards = useMemo(() => {
     const diagnosisTracks = savedDiagnosis?.recommendedPfeTracks ?? [];
@@ -222,6 +335,57 @@ export default function Pfe() {
     } satisfies PfeProjectIdea));
   }, [projects, readinessScore, savedDiagnosis]);
 
+  const selectedMilestone = milestones[Math.max(selectedMilestoneIndex, 0)] ?? milestones[0];
+  const completed = milestones.filter((milestone) => milestone.status === "finished").length;
+  const pct = Math.round((completed / milestones.length) * 100);
+  const selectedProject = projectCards.find((project) => project.id === selectedProjectId) ?? projectCards[0] ?? null;
+
+  useEffect(() => {
+    if (!projectCards.length) {
+      setSelectedProjectId(null);
+      return;
+    }
+
+    if (!selectedProjectId || !projectCards.some((project) => project.id === selectedProjectId)) {
+      setSelectedProjectId(projectCards[0].id);
+    }
+  }, [projectCards, selectedProjectId]);
+
+  const selectProject = (project: PfeProjectIdea) => {
+    setSelectedProjectId(project.id);
+    setProjectTitle(project.title);
+  };
+
+  const toggleSaveProject = (project: PfeProjectIdea) => {
+    setSavedProjectIds((current) => {
+      const next = current.includes(project.id) ? current.filter((id) => id !== project.id) : [...current, project.id];
+      saveToStorage(PFE_SAVED_PROJECTS_KEY, next);
+      toast({
+        title: current.includes(project.id) ? "Project removed" : "Project saved",
+        description: project.title,
+      });
+      return next;
+    });
+  };
+
+  const handleMilestoneClick = (index: number) => {
+    setMilestones((currentMilestones) =>
+      currentMilestones.map((milestone, milestoneIndex) => {
+        if (milestoneIndex !== index) return milestone;
+
+        if (!isMilestoneUnlocked(currentMilestones, index)) {
+          return milestone;
+        }
+
+        return {
+          ...milestone,
+          status: nextMilestoneStatus[milestone.status],
+        };
+      }),
+    );
+    setSelectedMilestoneIndex(index);
+  };
+
   const handleSubmitProgress = async () => {
     setSubmitError(null);
     setIsSubmitting(true);
@@ -239,7 +403,10 @@ export default function Pfe() {
       setFeedback(result);
       saveToStorage(PFE_PROGRESS_STORAGE_KEY, result);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Progress analysis failed. Please try again.");
+      const localResult = buildLocalProgressFeedback(payload);
+      setFeedback(localResult);
+      saveToStorage(PFE_PROGRESS_STORAGE_KEY, localResult);
+      setSubmitError(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -266,9 +433,9 @@ export default function Pfe() {
           </div>
         </div>
 
-        {/* Progress + Supervisor */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="border-border shadow-card lg:col-span-2">
+        {/* Progress */}
+        <div className="grid gap-6">
+          <Card className="border-border shadow-card">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Project milestones</CardTitle>
@@ -278,17 +445,27 @@ export default function Pfe() {
             </CardHeader>
             <CardContent className="space-y-2">
               {milestones.map((m, i) => (
-                <div
+                (() => {
+                  const unlocked = isMilestoneUnlocked(milestones, i);
+                  const isLocked = m.status === "not-started" && !unlocked;
+
+                  return (
+                <button
                   key={m.title}
-                  className={`flex items-center gap-3 rounded-xl border p-3 transition-smooth ${
-                    m.current
-                      ? "border-accent/40 bg-accent-soft/40"
+                  type="button"
+                  onClick={() => handleMilestoneClick(i)}
+                  aria-pressed={i === selectedMilestoneIndex}
+                  className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                    i === selectedMilestoneIndex
+                      ? "border-accent bg-accent-soft/50 shadow-sm"
+                      : m.status === "in-progress"
+                      ? "border-accent/40 bg-accent-soft/40 hover:border-accent/50"
                       : "border-border bg-background hover:border-accent/30"
-                  }`}
+                  } ${isLocked ? "opacity-70" : ""}`}
                 >
-                  {m.done ? (
+                  {m.status === "finished" ? (
                     <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
-                  ) : m.current ? (
+                  ) : m.status === "in-progress" ? (
                     <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-accent">
                       <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
                     </div>
@@ -296,48 +473,39 @@ export default function Pfe() {
                     <Circle className="h-5 w-5 shrink-0 text-muted-foreground/40" />
                   )}
                   <div className="flex-1">
-                    <p className={`text-sm font-medium ${m.done ? "text-muted-foreground line-through" : "text-foreground"}`}>
-                      Step {i + 1} · {m.title}
+                    <p className={`text-sm font-medium ${m.status === "finished" ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                      Step {m.step} · {m.title}
                     </p>
+                    <p className="mt-1 text-xs text-muted-foreground">{m.direction}</p>
                   </div>
-                  {m.current && <Badge className="border-0 bg-accent text-accent-foreground">In progress</Badge>}
-                </div>
+                  {i === selectedMilestoneIndex ? (
+                    <Badge className="border-0 bg-accent text-accent-foreground">Selected</Badge>
+                  ) : null}
+                  {isLocked ? (
+                    <Badge className="border-0 bg-muted text-muted-foreground">Locked</Badge>
+                  ) : null}
+                  <Badge className={`border-0 ${milestoneStatusStyles[m.status]}`}>
+                    {milestoneStatusLabel[m.status]}
+                  </Badge>
+                </button>
+                  );
+                })()
               ))}
-            </CardContent>
-          </Card>
 
-          <Card className="border-border shadow-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Supervisor</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <Avatar className="h-14 w-14">
-                  <AvatarFallback className="bg-gradient-accent text-base text-accent-foreground">{mentor.initials}</AvatarFallback>
-                </Avatar>
-                <div className="min-w-0">
-                  <p className="font-semibold text-foreground">{mentor.name}</p>
-                  <p className="text-xs text-muted-foreground">Faculty of Engineering</p>
-                  <p className="text-xs text-muted-foreground">{mentor.specialty}</p>
+              <div className="mt-4 rounded-xl border border-accent/20 bg-accent-soft/30 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-accent">Selected milestone</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">Step {selectedMilestone.step} · {selectedMilestone.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{selectedMilestone.direction}</p>
+                <div className="mt-3">
+                  <Badge className={`border-0 ${milestoneStatusStyles[selectedMilestone.status]}`}>
+                    {milestoneStatusLabel[selectedMilestone.status]}
+                  </Badge>
                 </div>
-              </div>
-              <div className="mt-4 space-y-2 rounded-xl bg-muted/50 p-3 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Last sync</span>
-                  <span className="font-medium text-foreground">2 days ago</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Next meeting</span>
-                  <span className="font-medium text-foreground">{mentor.nextSlot}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Fit score</span>
-                  <span className="font-medium text-success">{mentor.fit}%</span>
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" className="border-border" disabled><MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Chat</Button>
-                <Button variant="outline" size="sm" className="border-border" disabled><Mail className="mr-1.5 h-3.5 w-3.5" /> Email</Button>
+                {!isMilestoneUnlocked(milestones, selectedMilestoneIndex) && selectedMilestone.status === "not-started" ? (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    This step is locked until all previous steps are finished.
+                  </p>
+                ) : null}
               </div>
             </CardContent>
           </Card>
@@ -385,34 +553,52 @@ export default function Pfe() {
                 </div>
                 <CardTitle className="text-base">Suggested projects</CardTitle>
               </div>
-              <Button variant="ghost" size="sm" className="text-accent hover:text-accent" disabled>
-                See all matches
+              <Button variant="ghost" size="sm" className="text-accent hover:text-accent" onClick={reloadProjects} disabled={isLoadingProjects}>
+                {isLoadingProjects ? "Refreshing..." : "Refresh suggestions"}
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            {projectsError ? (
-              <Alert variant="destructive">
-                <AlertTitle>Could not load projects</AlertTitle>
-                <AlertDescription>{projectsError}</AlertDescription>
-              </Alert>
+            {selectedProject ? (
+              <div className="mb-4 rounded-xl border border-info/20 bg-info-soft/20 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-info">Selected project</p>
+                    <p className="mt-1 text-base font-semibold text-foreground">{selectedProject.title}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{selectedProject.description}</p>
+                  </div>
+                  <Badge className="border-0 bg-info text-info-foreground">Ready for progress update</Badge>
+                </div>
+              </div>
             ) : null}
 
             {isLoadingProjects && projectCards.length === 0 ? (
               <p className="text-sm text-muted-foreground">Loading project ideas…</p>
             ) : null}
 
-            {!isLoadingProjects && projectCards.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No project ideas yet. Run a diagnosis first, or start the backend.</p>
-            ) : null}
-
             <div className="grid gap-3 md:grid-cols-2">
               {projectCards.map((p) => {
+                const isSelectedProject = selectedProjectId === p.id;
                 const diagMatchToken = p.id.startsWith("diag-") ? Number(p.id.split("-")[1]) : NaN;
                 const match = Number.isFinite(diagMatchToken) ? diagMatchToken : computeStableMatch(p.id, readinessScore);
 
                 return (
-                  <div key={p.id} className="group rounded-xl border border-border bg-background p-4 transition-smooth hover:border-accent hover:shadow-md">
+                  <div
+                    key={p.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelectedProject}
+                    onClick={() => selectProject(p)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        selectProject(p);
+                      }
+                    }}
+                    className={`group rounded-xl border p-4 transition-smooth hover:border-accent hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 ${
+                      isSelectedProject ? "border-accent bg-accent-soft/30 shadow-sm" : "border-border bg-background"
+                    }`}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-primary text-sm font-bold text-primary-foreground">
@@ -421,6 +607,7 @@ export default function Pfe() {
                         <div>
                           <p className="font-semibold text-foreground">{p.title}</p>
                           <p className="text-xs text-muted-foreground">{p.domain} · {p.difficulty}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">{p.description}</p>
                         </div>
                       </div>
                       <div className="text-right">
@@ -433,6 +620,13 @@ export default function Pfe() {
                       <MapPin className="h-3 w-3" /> {p.matchReason}
                     </div>
 
+                    {isSelectedProject ? (
+                      <div className="mt-3 flex items-center gap-2">
+                        <Badge className="border-0 bg-accent text-accent-foreground">Selected</Badge>
+                        <span className="text-xs text-muted-foreground">This project will be used in the progress form below.</span>
+                      </div>
+                    ) : null}
+
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {p.requiredSkills.slice(0, 6).map((t) => (
                         <span key={t} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{t}</span>
@@ -443,12 +637,24 @@ export default function Pfe() {
                       <Button
                         size="sm"
                         className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
-                        onClick={() => setProjectTitle(p.title)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          selectProject(p);
+                        }}
                       >
-                        Select <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                        {isSelectedProject ? "Selected" : "Select"} <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 border-border" disabled aria-label="Save project (coming soon)">
-                        <Heart className="h-4 w-4" />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 shrink-0 border-border"
+                        aria-label={savedProjectIds.includes(p.id) ? "Unsave project" : "Save project"}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleSaveProject(p);
+                        }}
+                      >
+                        <Heart className={`h-4 w-4 ${savedProjectIds.includes(p.id) ? "fill-current text-destructive" : ""}`} />
                       </Button>
                     </div>
                   </div>
@@ -580,6 +786,14 @@ export default function Pfe() {
               </div>
             ) : !isSubmitting && !submitError ? (
               <p className="text-sm text-muted-foreground">No progress feedback yet — fill the form and click <strong>Analyze progress</strong>.</p>
+            ) : null}
+
+            {selectedProject ? (
+              <div className="rounded-xl border border-border bg-muted/20 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Using selected project</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">{selectedProject.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{selectedProject.description}</p>
+              </div>
             ) : null}
           </CardContent>
         </Card>

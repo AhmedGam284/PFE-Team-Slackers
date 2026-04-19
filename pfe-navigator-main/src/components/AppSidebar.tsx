@@ -1,6 +1,7 @@
-import { GraduationCap, LayoutDashboard, Brain, Target, Home, Settings, LogOut } from "lucide-react";
+import { GraduationCap, LayoutDashboard, Brain, Target, Home, Settings, LogOut, MessageSquareText, Sparkles } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/auth";
+import { getAssignedSupervisorName } from "@/lib/studentJourney";
 import {
   Sidebar,
   SidebarContent,
@@ -18,13 +19,17 @@ import {
 const studentItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "AI Agent", url: "/ai-agent", icon: Sparkles },
   { title: "AI Diagnosis", url: "/diagnosis", icon: Brain },
   { title: "PFE & Matching", url: "/pfe", icon: Target },
+  { title: "Mentor Hub", url: "/mentor-hub", icon: MessageSquareText },
 ];
 
 const mentorItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "Mentor Dashboard", url: "/mentor-dashboard", icon: LayoutDashboard },
+  { title: "AI Agent", url: "/ai-agent", icon: Sparkles },
+  { title: "Mentor Hub", url: "/mentor-hub", icon: MessageSquareText },
 ];
 
 export function AppSidebar() {
@@ -85,6 +90,12 @@ export function AppSidebar() {
               <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
                 {user.role}
               </span>
+              {user.role === "student" ? (
+                <div className="mt-2 rounded-lg bg-muted/60 px-2 py-1.5">
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Assigned supervisor</p>
+                  <p className="mt-0.5 font-medium text-sidebar-accent-foreground">{getAssignedSupervisorName()}</p>
+                </div>
+              ) : null}
             </div>
           ) : null}
           <SidebarMenuItem>

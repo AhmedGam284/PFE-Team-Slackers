@@ -11,7 +11,7 @@ Node.js + Express + TypeScript backend for the PFE Compass frontend.
 - Request logging (morgan)
 - Centralized error handling
 - Zod request validation
-- OpenAI integration (optional) with graceful fallbacks
+- Gemini integration (optional) with graceful fallbacks
 
 ## Setup
 
@@ -25,8 +25,10 @@ cp .env.example .env
 
 - `PORT` (default: `5000`)
 - `CORS_ORIGINS` (default: `http://localhost:8080,http://localhost:8081`)
-- `OPENAI_API_KEY` (optional)
-- `OPENAI_MODEL` (optional, default set in code)
+- `GEMINI_API_KEY` (optional)
+- `GEMINI_MODEL` (optional, default set in code)
+- `OPENAI_API_KEY` (legacy fallback, optional)
+- `OPENAI_MODEL` (legacy fallback, optional)
 
 ## Run (dev)
 
@@ -51,7 +53,7 @@ npm start
 - `GET /api/pfe/projects`
 - `POST /api/pfe/progress`
 
-## OpenAI (optional)
+## Gemini (optional)
 
-Set `OPENAI_API_KEY` in `.env`.
-If OpenAI is not configured or fails, endpoints return a deterministic fallback response instead of crashing.
+Set `GEMINI_API_KEY` in `.env`.
+If Gemini is not configured or fails, endpoints return a deterministic fallback response instead of crashing.

@@ -278,11 +278,15 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" className="border-border" disabled>
-                  <MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Chat
+                <Button asChild variant="outline" size="sm" className="border-border">
+                  <Link to="/mentor-hub?tab=chat">
+                    <MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Chat
+                  </Link>
                 </Button>
-                <Button variant="outline" size="sm" className="border-border" disabled>
-                  <Mail className="mr-1.5 h-3.5 w-3.5" /> Email
+                <Button asChild variant="outline" size="sm" className="border-border">
+                  <Link to="/mentor-hub?tab=mail">
+                    <Mail className="mr-1.5 h-3.5 w-3.5" /> Email
+                  </Link>
                 </Button>
               </div>
               <div className="mt-4 rounded-xl bg-muted/50 p-3">
@@ -304,8 +308,8 @@ export default function Dashboard() {
                 </div>
                 <CardTitle className="text-base">PFE topic suggestions from full academic run</CardTitle>
               </div>
-              <Button variant="ghost" size="sm" className="text-accent hover:text-accent" disabled>
-                Refresh suggestions
+              <Button asChild variant="ghost" size="sm" className="text-accent hover:text-accent">
+                <Link to="/ai-agent?tab=diagnosis">Refresh suggestions</Link>
               </Button>
             </CardHeader>
             <CardContent>

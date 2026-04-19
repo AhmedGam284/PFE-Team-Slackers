@@ -1,4 +1,5 @@
 import { Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,6 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Users, CalendarCheck, MessageSquare, Sparkles, TrendingUp, GraduationCap } from "lucide-react";
 import { useAuth } from "@/context/auth";
-import { useToast } from "@/hooks/use-toast";
 
 const mentees = [
   { name: "Sara Amrani", topic: "Adaptive Learning Analytics", status: "In progress", readiness: 82 },
@@ -17,7 +17,6 @@ const mentees = [
 
 export default function MentorDashboard() {
   const { user } = useAuth();
-  const { toast } = useToast();
 
   if (user?.role !== "mentor") {
     return <Navigate to="/dashboard" replace />;
@@ -32,16 +31,10 @@ export default function MentorDashboard() {
             <h1 className="mt-1 text-2xl font-bold text-foreground md:text-3xl">Welcome, {user?.name ?? "mentor"}</h1>
             <p className="mt-1 text-sm text-muted-foreground">Review mentees, track readiness, and keep PFE guidance aligned.</p>
           </div>
-          <Button
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
-            onClick={() =>
-              toast({
-                title: "Review all mentees",
-                description: "This action is a demo placeholder in the MVP.",
-              })
-            }
-          >
-            <Sparkles className="mr-2 h-4 w-4" /> Review all mentees
+          <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
+            <Link to="/mentor-hub?tab=mail">
+              <Sparkles className="mr-2 h-4 w-4" /> Review all mentees
+            </Link>
           </Button>
         </div>
 
@@ -110,31 +103,15 @@ export default function MentorDashboard() {
                 </div>
                 <Progress value={mentee.readiness} className="mt-3 h-2" />
                 <div className="mt-4 flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 border-border"
-                    onClick={() =>
-                      toast({
-                        title: `Message ${mentee.name}`,
-                        description: "Messaging is not implemented in this MVP demo.",
-                      })
-                    }
-                  >
-                    <MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Message
+                  <Button asChild variant="outline" size="sm" className="flex-1 border-border">
+                    <Link to="/mentor-hub?tab=chat">
+                      <MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Message
+                    </Link>
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 border-border"
-                    onClick={() =>
-                      toast({
-                        title: `Review ${mentee.name}`,
-                        description: "Detailed reviews are coming soon in the full product.",
-                      })
-                    }
-                  >
-                    <GraduationCap className="mr-1.5 h-3.5 w-3.5" /> Review
+                  <Button asChild variant="outline" size="sm" className="flex-1 border-border">
+                    <Link to="/mentor-hub?tab=supervisor">
+                      <GraduationCap className="mr-1.5 h-3.5 w-3.5" /> Review
+                    </Link>
                   </Button>
                 </div>
               </div>
