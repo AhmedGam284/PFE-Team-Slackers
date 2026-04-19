@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,36 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Settings2, Bell, GraduationCap, Save, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/context/auth";
+import { useToast } from "@/hooks/use-toast";
+import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
+
+type StoredSettings = {
+  weeklyDigest: boolean;
+  mentorAlerts: boolean;
+  reminderAlerts: boolean;
+  preferredTrack: "ai" | "software" | "research";
+  language: "en" | "fr" | "ar";
+};
+
+function isStoredSettings(value: unknown): value is StoredSettings {
+  if (!value || typeof value !== "object") return false;
+
+  const candidate = value as Partial<StoredSettings>;
+  const validPreferredTrack = candidate.preferredTrack === "ai" || candidate.preferredTrack === "software" || candidate.preferredTrack === "research";
+  const validLanguage = candidate.language === "en" || candidate.language === "fr" || candidate.language === "ar";
+
+  return (
+    typeof candidate.weeklyDigest === "boolean" &&
+    typeof candidate.mentorAlerts === "boolean" &&
+    typeof candidate.reminderAlerts === "boolean" &&
+    validPreferredTrack &&
+    validLanguage
+  );
+}
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
+  const { toast } = useToast();
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [weeklyDigest, setWeeklyDigest] = useState(true);
@@ -19,6 +46,47 @@ export default function SettingsPage() {
   const [reminderAlerts, setReminderAlerts] = useState(true);
   const [preferredTrack, setPreferredTrack] = useState("ai");
   const [language, setLanguage] = useState("en");
+
+  useEffect(() => {
+    const saved = loadFromStorage<StoredSettings>(STORAGE_KEYS.settings, {
+      validate: isStoredSettings,
+      removeIfInvalid: true,
+    });
+
+    if (!saved) return;
+
+    setWeeklyDigest(saved.weeklyDigest);
+    setMentorAlerts(saved.mentorAlerts);
+    setReminderAlerts(saved.reminderAlerts);
+    setPreferredTrack(saved.preferredTrack);
+    setLanguage(saved.language);
+  }, []);
+
+  const handleSave = () => {
+    if (user) {
+      updateProfile(
+        {
+          name: name.trim() || user.name,
+          email: email.trim().toLowerCase() || user.email,
+          role: user.role,
+        },
+        user.email,
+      );
+    }
+
+    saveToStorage(STORAGE_KEYS.settings, {
+      weeklyDigest,
+      mentorAlerts,
+      reminderAlerts,
+      preferredTrack,
+      language,
+    } satisfies StoredSettings);
+
+    toast({
+      title: "Saved",
+      description: "Your settings are saved locally for this demo.",
+    });
+  };
 
   return (
     <AppLayout>
@@ -32,7 +100,7 @@ export default function SettingsPage() {
             <h1 className="mt-1 text-2xl font-bold text-foreground md:text-3xl">Account and Preferences</h1>
             <p className="mt-1 text-sm text-muted-foreground">Control profile info, notifications, and recommendation preferences.</p>
           </div>
-          <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
+          <Button className="bg-accent text-accent-foreground hover:bg-accent/90" onClick={handleSave}>
             <Save className="mr-2 h-4 w-4" /> Save changes
           </Button>
         </div>

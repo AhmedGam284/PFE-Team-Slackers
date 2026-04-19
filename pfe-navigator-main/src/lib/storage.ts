@@ -1,6 +1,7 @@
 export const STORAGE_KEYS = {
   diagnosis: "pfe-compass-diagnosis",
   pfeProgress: "pfe-compass-pfe-progress",
+  settings: "pfe-compass-settings",
 } as const;
 
 export const saveToStorage = (key: string, value: unknown) => {

@@ -25,6 +25,7 @@ import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Responsi
 import { studentJourney } from "@/lib/studentJourney";
 import { useEffect, useMemo, useState } from "react";
 import { loadFromStorage, saveToStorage } from "@/lib/storage";
+import { Link } from "react-router-dom";
 
 const clamp = (value: number, min = 0, max = 100) => Math.min(max, Math.max(min, value));
 
@@ -169,11 +170,17 @@ export default function Diagnosis() {
     const strengthsLen = strengthsCount;
     const gapsLen = skillGapsCount;
 
-    // Hackathon-MVP deterministic mapping: believable + visibly reactive.
-    const technical = clamp(readiness + 4 + Math.min(6, strengthsLen));
-    const research = clamp(readiness - gapsLen * 2);
-    const communication = clamp(readiness - 3 + Math.max(0, strengthsLen - gapsLen));
-    const planning = clamp(readiness - 1 + strengthsLen);
+    const pct = (n: number) => clamp(Math.round(n));
+
+    // Hackathon-MVP deterministic mapping: amplify differences so the UI
+    // clearly shifts away from the static demo once `aiDiagnosis` is present.
+    const balance = strengthsLen - gapsLen;
+    const intensity = strengthsLen + gapsLen;
+
+    const technical = pct(readiness + 10 + balance * 5);
+    const research = pct(readiness - 10 - balance * 4);
+    const communication = pct(readiness - 6 + balance * 3 - intensity * 1.5);
+    const planning = pct(readiness + 4 + strengthsLen * 3 - gapsLen * 5);
 
     return [
       {
@@ -210,13 +217,16 @@ export default function Diagnosis() {
     const strengthsLen = strengthsCount;
     const gapsLen = skillGapsCount;
 
+    const pct = (n: number) => clamp(Math.round(n));
+    const balance = strengthsLen - gapsLen;
+
     return [
-      { skill: "Technical", value: clamp(readiness + 4 + Math.min(8, strengthsLen)), full: 82 },
-      { skill: "Research", value: clamp(readiness - gapsLen * 2), full: 78 },
-      { skill: "Comms", value: clamp(readiness - 3 + Math.max(0, strengthsLen - 1)), full: 80 },
-      { skill: "Planning", value: clamp(readiness - 1 + strengthsLen), full: 79 },
-      { skill: "AI", value: clamp(readiness + 2 - gapsLen + Math.floor(strengthsLen / 2)), full: 81 },
-      { skill: "Consistency", value: clamp(readiness - gapsLen * 3 + strengthsLen), full: 84 },
+      { skill: "Technical", value: pct(readiness + 12 + balance * 4), full: 82 },
+      { skill: "Research", value: pct(readiness - 8 - balance * 5), full: 78 },
+      { skill: "Comms", value: pct(readiness - 6 + balance * 3 - gapsLen * 3), full: 80 },
+      { skill: "Planning", value: pct(readiness + 6 + strengthsLen * 2 - gapsLen * 5), full: 79 },
+      { skill: "AI", value: pct(readiness + 8 + Math.floor(strengthsLen / 2) * 5 - gapsLen * 4), full: 81 },
+      { skill: "Consistency", value: pct(readiness - 2 + balance * 2 - gapsLen * 6), full: 84 },
     ];
   }, [aiDiagnosis, displayedReadinessScore, strengthsCount, skillGapsCount]);
 
@@ -265,6 +275,7 @@ export default function Diagnosis() {
     } finally {
       setIsRunning(false);
     }
+
   };
 
   return (
@@ -290,7 +301,7 @@ export default function Diagnosis() {
             ) : (
               <Sparkles className="mr-2 h-4 w-4" />
             )}
-            {isRunning ? "Running..." : "Re-run diagnosis"}
+            {isRunning ? "Running..." : aiDiagnosis ? "Re-run diagnosis" : "Run diagnosis"}
           </Button>
         </div>
 
@@ -383,6 +394,15 @@ export default function Diagnosis() {
           <Alert variant="destructive">
             <AlertTitle>Diagnosis failed</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {!error && !isRunning && !aiDiagnosis ? (
+          <Alert>
+            <AlertTitle>No diagnosis yet</AlertTitle>
+            <AlertDescription>
+              Fill the student input and click <strong>Run diagnosis</strong> to generate personalized scores, radar values, recommendations, and mentor advice.
+            </AlertDescription>
           </Alert>
         ) : null}
 
@@ -525,7 +545,9 @@ export default function Diagnosis() {
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{r.desc}</p>
                 </div>
-                <Button variant="outline" size="sm" className="border-border">View</Button>
+                <Button asChild variant="outline" size="sm" className="border-border">
+                  <Link to="/pfe">View</Link>
+                </Button>
               </div>
             ))}
           </CardContent>

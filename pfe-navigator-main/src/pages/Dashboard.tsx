@@ -18,11 +18,13 @@ import {
   UserCheck,
 } from "lucide-react";
 import { studentJourney } from "@/lib/studentJourney";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/context/auth";
 import { useEffect, useState } from "react";
 import type { DiagnosisAnalyzeData } from "@/lib/apiContracts";
-import { loadFromStorage, STORAGE_KEYS } from "@/lib/storage";
+import { loadFromStorage } from "@/lib/storage";
+
+const DIAGNOSIS_STORAGE_KEY = "pfe-compass-diagnosis";
 
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === "string");
@@ -73,7 +75,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     setSavedDiagnosis(
-      loadFromStorage<DiagnosisAnalyzeData>(STORAGE_KEYS.diagnosis, {
+      loadFromStorage<DiagnosisAnalyzeData>(DIAGNOSIS_STORAGE_KEY, {
         validate: isDiagnosisAnalyzeData,
         removeIfInvalid: true,
       }),
@@ -85,10 +87,17 @@ export default function Dashboard() {
   }
 
   const readinessScore = savedDiagnosis?.readinessScore ?? studentJourney.readinessScore;
-  const readinessLevel = savedDiagnosis ? readinessLevelFromScore(readinessScore) : studentJourney.readinessLevel;
-  const mentorAdvice = savedDiagnosis?.mentorAdvice;
-  const firstTrackTitle = savedDiagnosis?.recommendedPfeTracks?.[0]?.title;
-  const firstNextStep = savedDiagnosis?.recommendedNextSteps?.[0];
+  const readinessLevel = readinessLevelFromScore(readinessScore);
+
+  const mentorAdvice =
+    savedDiagnosis?.mentorAdvice ??
+    `Based on your journey consistency (${studentJourney.consistencyIndex}%), keep scope tight and validate early with your supervisor.`;
+
+  const firstTrackTitle =
+    savedDiagnosis?.recommendedPfeTracks?.[0]?.title ?? studentJourney.topicSuggestions[0]?.title;
+
+  const firstNextStep =
+    savedDiagnosis?.recommendedNextSteps?.[0] ?? tasks.find((t) => !t.done)?.title;
 
   return (
     <AppLayout>
@@ -101,8 +110,10 @@ export default function Dashboard() {
               Tracking from Year 1 to PFE with a unified academic score and mentor guidance.
             </p>
           </div>
-          <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
-            <Sparkles className="mr-2 h-4 w-4" /> Get AI insight
+          <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
+            <Link to="/diagnosis">
+              <Sparkles className="mr-2 h-4 w-4" /> {savedDiagnosis ? "Update diagnosis" : "Run diagnosis"}
+            </Link>
           </Button>
         </div>
 
@@ -135,26 +146,24 @@ export default function Dashboard() {
               <Progress value={readinessScore} className="mt-4 h-2 bg-white/10" />
               <p className="mt-2 text-xs opacity-70">Level: {readinessLevel}</p>
 
-              {savedDiagnosis ? (
-                <div className="mt-4 space-y-2 rounded-xl bg-white/10 p-3 text-xs backdrop-blur-sm">
-                  <div>
-                    <p className="font-semibold opacity-90">Mentor advice</p>
-                    <p className="mt-1 opacity-80">{mentorAdvice}</p>
-                  </div>
-
-                  {firstTrackTitle ? (
-                    <p className="opacity-80">
-                      <span className="font-semibold opacity-90">Track:</span> {firstTrackTitle}
-                    </p>
-                  ) : null}
-
-                  {firstNextStep ? (
-                    <p className="opacity-80">
-                      <span className="font-semibold opacity-90">Next step:</span> {firstNextStep}
-                    </p>
-                  ) : null}
+              <div className="mt-4 space-y-2 rounded-xl bg-white/10 p-3 text-xs backdrop-blur-sm">
+                <div>
+                  <p className="font-semibold opacity-90">Mentor advice</p>
+                  <p className="mt-1 opacity-80">{mentorAdvice}</p>
                 </div>
-              ) : null}
+
+                {firstTrackTitle ? (
+                  <p className="opacity-80">
+                    <span className="font-semibold opacity-90">Track:</span> {firstTrackTitle}
+                  </p>
+                ) : null}
+
+                {firstNextStep ? (
+                  <p className="opacity-80">
+                    <span className="font-semibold opacity-90">Next step:</span> {firstNextStep}
+                  </p>
+                ) : null}
+              </div>
             </CardContent>
           </Card>
 
@@ -223,7 +232,9 @@ export default function Dashboard() {
           <Card className="border-border shadow-card lg:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
               <CardTitle className="text-base">Upcoming tasks & deadlines</CardTitle>
-              <Button variant="ghost" size="sm" className="text-accent hover:text-accent">View all <ArrowUpRight className="ml-1 h-3.5 w-3.5" /></Button>
+              <Button asChild variant="ghost" size="sm" className="text-accent hover:text-accent">
+                <Link to="/pfe">View all <ArrowUpRight className="ml-1 h-3.5 w-3.5" /></Link>
+              </Button>
             </CardHeader>
             <CardContent className="space-y-2">
               {tasks.map((t) => (
@@ -267,10 +278,10 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" className="border-border">
+                <Button variant="outline" size="sm" className="border-border" disabled>
                   <MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Chat
                 </Button>
-                <Button variant="outline" size="sm" className="border-border">
+                <Button variant="outline" size="sm" className="border-border" disabled>
                   <Mail className="mr-1.5 h-3.5 w-3.5" /> Email
                 </Button>
               </div>
@@ -293,12 +304,18 @@ export default function Dashboard() {
                 </div>
                 <CardTitle className="text-base">PFE topic suggestions from full academic run</CardTitle>
               </div>
-              <Button variant="ghost" size="sm" className="text-accent hover:text-accent">Refresh suggestions</Button>
+              <Button variant="ghost" size="sm" className="text-accent hover:text-accent" disabled>
+                Refresh suggestions
+              </Button>
             </CardHeader>
             <CardContent>
               <div className="grid gap-3 md:grid-cols-3">
                 {studentJourney.topicSuggestions.map((topic) => (
-                  <div key={topic.title} className="group cursor-pointer rounded-xl border border-border bg-background p-4 transition-smooth hover:border-accent hover:shadow-md">
+                  <Link
+                    key={topic.title}
+                    to="/pfe"
+                    className="group block rounded-xl border border-border bg-background p-4 transition-smooth hover:border-accent hover:shadow-md"
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-sm font-semibold text-foreground">{topic.title}</p>
                       <Badge className="ml-2 shrink-0 border-0 bg-accent text-accent-foreground">{topic.fit}%</Badge>
@@ -309,7 +326,7 @@ export default function Dashboard() {
                         <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{tag}</span>
                       ))}
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </CardContent>
