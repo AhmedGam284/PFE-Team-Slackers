@@ -18,6 +18,8 @@ import {
   UserCheck,
 } from "lucide-react";
 import { studentJourney } from "@/lib/studentJourney";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "@/context/auth";
 
 const tasks = [
   { title: "Finalize PFE problem statement", due: "Today", priority: "high", done: false },
@@ -27,6 +29,12 @@ const tasks = [
 ];
 
 export default function Dashboard() {
+  const { user } = useAuth();
+
+  if (user?.role === "mentor") {
+    return <Navigate to="/mentor-dashboard" replace />;
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">

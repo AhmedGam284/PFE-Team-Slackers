@@ -15,11 +15,16 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const mainItems = [
+const studentItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "AI Diagnosis", url: "/diagnosis", icon: Brain },
   { title: "PFE & Matching", url: "/pfe", icon: Target },
+];
+
+const mentorItems = [
+  { title: "Home", url: "/", icon: Home },
+  { title: "Mentor Dashboard", url: "/mentor-dashboard", icon: LayoutDashboard },
 ];
 
 export function AppSidebar() {
@@ -27,6 +32,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { pathname } = useLocation();
+  const items = user?.role === "mentor" ? mentorItems : studentItems;
 
   const getCls = (path: string) => {
     const active = pathname === path;
@@ -56,7 +62,7 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-sidebar-foreground/60">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainItems.map((item) => (
+              {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end className={getCls(item.url)}>
@@ -76,6 +82,9 @@ export function AppSidebar() {
           {!collapsed && user ? (
             <div className="px-3 pb-2 pt-1 text-xs text-sidebar-foreground/70">
               Signed in as <span className="font-medium text-sidebar-accent-foreground">{user.name}</span>
+              <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                {user.role}
+              </span>
             </div>
           ) : null}
           <SidebarMenuItem>

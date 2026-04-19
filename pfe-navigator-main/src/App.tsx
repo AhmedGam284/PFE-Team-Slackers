@@ -15,6 +15,7 @@ import Diagnosis from "./pages/Diagnosis.tsx";
 import Pfe from "./pages/Pfe.tsx";
 import SettingsPage from "./pages/Settings.tsx";
 import Profile from "./pages/Profile.tsx";
+import MentorDashboard from "./pages/MentorDashboard.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,14 @@ const App = () => (
                 element={
                   <RequireAuth>
                     <Dashboard />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/mentor-dashboard"
+                element={
+                  <RequireAuth>
+                    <MentorDashboard />
                   </RequireAuth>
                 }
               />

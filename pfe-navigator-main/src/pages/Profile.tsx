@@ -49,7 +49,7 @@ export default function Profile() {
   );
 
   const handleSave = () => {
-    updateProfile({ name: name.trim(), email: email.trim().toLowerCase() }, user?.email);
+    updateProfile({ name: name.trim(), email: email.trim().toLowerCase(), role: user?.role ?? "student" }, user?.email);
     setIsEditing(false);
   };
 
@@ -118,6 +118,7 @@ export default function Profile() {
                   <h2 className="text-xl font-bold text-foreground">{user?.name ?? "Sara Amrani"}</h2>
                   <p className="mt-1 text-sm text-muted-foreground">{user?.email ?? "student@example.com"}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
+                    <Badge className="border-0 bg-muted text-muted-foreground uppercase tracking-wider">{user?.role ?? "student"}</Badge>
                     <Badge className="border-0 bg-accent-soft text-accent">{studentJourney.readinessLevel} level</Badge>
                     <Badge className="border-0 bg-info-soft text-info">{studentJourney.academicAverage20}/20 average</Badge>
                     <Badge className="border-0 bg-success/15 text-success">Mentor matched</Badge>

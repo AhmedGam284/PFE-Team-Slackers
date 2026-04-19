@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/context/auth";
 
 export default function SignUp() {
@@ -15,6 +16,7 @@ export default function SignUp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState<"student" | "mentor">("student");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -49,8 +51,8 @@ export default function SignUp() {
     }
 
     try {
-      await signUp(name, email, password);
-      navigate("/dashboard", { replace: true });
+      const session = await signUp(name, email, password, role);
+      navigate(session.role === "mentor" ? "/mentor-dashboard" : "/dashboard", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create account.");
     } finally {
@@ -87,6 +89,36 @@ export default function SignUp() {
                     <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input id="email" type="email" className="pl-9" value={email} onChange={(event) => setEmail(event.target.value)} required />
                   </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label>I am joining as</Label>
+                  <RadioGroup value={role} onValueChange={(value) => setRole(value as "student" | "mentor")} className="grid gap-3 sm:grid-cols-2">
+                    <Label
+                      htmlFor="role-student"
+                      className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
+                        role === "student" ? "border-accent bg-accent-soft/30" : "border-border bg-background"
+                      }`}
+                    >
+                      <RadioGroupItem id="role-student" value="student" className="mt-1" />
+                      <span>
+                        <span className="block text-sm font-semibold text-foreground">Student</span>
+                        <span className="mt-1 block text-xs text-muted-foreground">Track your PFE, skills, and mentor progress.</span>
+                      </span>
+                    </Label>
+                    <Label
+                      htmlFor="role-mentor"
+                      className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
+                        role === "mentor" ? "border-accent bg-accent-soft/30" : "border-border bg-background"
+                      }`}
+                    >
+                      <RadioGroupItem id="role-mentor" value="mentor" className="mt-1" />
+                      <span>
+                        <span className="block text-sm font-semibold text-foreground">Mentor</span>
+                        <span className="mt-1 block text-xs text-muted-foreground">Supervise students and review their academic readiness.</span>
+                      </span>
+                    </Label>
+                  </RadioGroup>
                 </div>
 
                 <div className="space-y-2">

@@ -37,13 +37,15 @@ export default function SignIn() {
     setLoading(true);
 
     try {
-      await signIn(email, password);
+      const session = await signIn(email, password);
 
       if (!rememberMe) {
         window.localStorage.removeItem("pfe-compass-session");
       }
 
-      navigate(from, { replace: true });
+      navigate(from === "/dashboard" || from === "/mentor-dashboard" ? from : session.role === "mentor" ? "/mentor-dashboard" : "/dashboard", {
+        replace: true,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in.");
     } finally {

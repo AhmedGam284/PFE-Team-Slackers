@@ -3,12 +3,13 @@ import { createContext, ReactNode, useContext, useEffect, useMemo, useState } fr
 type User = {
   name: string;
   email: string;
+  role: "student" | "mentor";
 };
 
 type AuthContextValue = {
   user: User | null;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<User>;
+  signUp: (name: string, email: string, password: string, role: User["role"]) => Promise<User>;
   updateProfile: (nextUser: User, previousEmail?: string) => void;
   signOut: () => void;
 };
@@ -22,6 +23,13 @@ const DEFAULT_USERS: StoredUser[] = [
     name: "Demo Student",
     email: "student@example.com",
     password: "password123",
+    role: "student",
+  },
+  {
+    name: "Demo Mentor",
+    email: "mentor@example.com",
+    password: "password123",
+    role: "mentor",
   },
 ];
 
@@ -39,8 +47,17 @@ function getStoredUsers(): StoredUser[] {
   }
 
   try {
-    const parsed = JSON.parse(raw) as StoredUser[];
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed = JSON.parse(raw) as Array<Partial<StoredUser>>;
+    return Array.isArray(parsed)
+      ? parsed
+          .filter((candidate): candidate is StoredUser => Boolean(candidate.name && candidate.email && candidate.password))
+          .map((candidate) => ({
+            name: candidate.name,
+            email: candidate.email.toLowerCase(),
+            password: candidate.password,
+            role: candidate.role === "mentor" ? "mentor" : "student",
+          }))
+      : [];
   } catch {
     return [];
   }
@@ -61,9 +78,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const session = JSON.parse(sessionRaw) as User;
+      const session = JSON.parse(sessionRaw) as Partial<User>;
       if (session?.email && session?.name) {
-        setUser(session);
+        setUser({
+          name: session.name,
+          email: session.email.toLowerCase(),
+          role: session.role === "mentor" ? "mentor" : "student",
+        });
       }
     } catch {
       window.localStorage.removeItem(SESSION_STORAGE_KEY);
@@ -82,11 +103,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error("Invalid email or password.");
         }
 
-        const session = { name: matchedUser.name, email: matchedUser.email };
+        const session = { name: matchedUser.name, email: matchedUser.email, role: matchedUser.role };
         setUser(session);
         window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+        return session;
       },
-      signUp: async (name, email, password) => {
+      signUp: async (name, email, password, role) => {
         const normalizedEmail = email.trim().toLowerCase();
         const users = getStoredUsers();
 
@@ -98,12 +120,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: name.trim(),
           email: normalizedEmail,
           password,
+          role,
         };
 
         saveStoredUsers([...users, nextUser]);
-        const session = { name: nextUser.name, email: nextUser.email };
+        const session = { name: nextUser.name, email: nextUser.email, role: nextUser.role };
         setUser(session);
         window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+        return session;
       },
       updateProfile: (nextUser, previousEmail) => {
         setUser(nextUser);
