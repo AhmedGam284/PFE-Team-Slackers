@@ -25,7 +25,10 @@ import { studentJourney } from "@/lib/studentJourney";
 import { useEffect, useMemo, useState } from "react";
 import type { DiagnosisAnalyzeData, PfeProgressFeedbackData, PfeProjectIdea, PfeProgressRequest } from "@/lib/apiContracts";
 import { getPfeProjects, submitPfeProgress } from "@/lib/pfeApi";
-import { loadFromStorage, saveToStorage, STORAGE_KEYS } from "@/lib/storage";
+import { loadFromStorage, saveToStorage } from "@/lib/storage";
+
+const DIAGNOSIS_STORAGE_KEY = "pfe-compass-diagnosis";
+const PFE_PROGRESS_STORAGE_KEY = "pfe-compass-pfe-progress";
 
 const milestones = [
   { title: "Project charter approved", done: true },
@@ -139,14 +142,14 @@ export default function Pfe() {
 
   useEffect(() => {
     setSavedDiagnosis(
-      loadFromStorage<DiagnosisAnalyzeData>(STORAGE_KEYS.diagnosis, {
+      loadFromStorage<DiagnosisAnalyzeData>(DIAGNOSIS_STORAGE_KEY, {
         validate: isDiagnosisAnalyzeData,
         removeIfInvalid: true,
       }),
     );
 
     setFeedback(
-      loadFromStorage<PfeProgressFeedbackData>(STORAGE_KEYS.pfeProgress, {
+      loadFromStorage<PfeProgressFeedbackData>(PFE_PROGRESS_STORAGE_KEY, {
         validate: isPfeProgressFeedbackData,
         removeIfInvalid: true,
       }),
@@ -182,9 +185,31 @@ export default function Pfe() {
   }, []);
 
   const projectCards = useMemo(() => {
+    const diagnosisTracks = savedDiagnosis?.recommendedPfeTracks ?? [];
+    const diagnosisCards: PfeProjectIdea[] = diagnosisTracks.slice(0, 4).map((track, index) => {
+      const difficulty: PfeProjectIdea["difficulty"] =
+        track.matchScore >= 85 ? "advanced" : track.matchScore >= 70 ? "intermediate" : "beginner";
+
+      return {
+        id: `diag-${track.matchScore}-${index}-${track.title}`,
+        title: track.title,
+        domain: "Diagnosis",
+        difficulty,
+        description: track.reason,
+        requiredSkills: (savedDiagnosis?.skillGaps ?? []).slice(0, 6),
+        matchReason: `From diagnosis (match ${track.matchScore}%)`,
+      };
+    });
+
+    // If we have diagnosis tracks, show them first to make the page feel reactive.
+    if (diagnosisCards.length) {
+      return projects.length ? [...diagnosisCards, ...projects.slice(0, 4)] : diagnosisCards;
+    }
+
     if (projects.length) return projects;
+
     // fallback to demo data if backend isn't available
-    const difficulty = readinessScore >= 85 ? "advanced" : readinessScore >= 70 ? "intermediate" : "beginner";
+    const difficulty: PfeProjectIdea["difficulty"] = readinessScore >= 85 ? "advanced" : readinessScore >= 70 ? "intermediate" : "beginner";
 
     return studentJourney.topicSuggestions.slice(0, 4).map((topic, index) => ({
       id: `fallback-${index}-${topic.title}`,
@@ -195,7 +220,7 @@ export default function Pfe() {
       requiredSkills: topic.tags,
       matchReason: "Fallback suggestions (backend not available)",
     } satisfies PfeProjectIdea));
-  }, [projects, readinessScore]);
+  }, [projects, readinessScore, savedDiagnosis]);
 
   const handleSubmitProgress = async () => {
     setSubmitError(null);
@@ -212,7 +237,7 @@ export default function Pfe() {
     try {
       const result = await submitPfeProgress(payload);
       setFeedback(result);
-      saveToStorage(STORAGE_KEYS.pfeProgress, result);
+      saveToStorage(PFE_PROGRESS_STORAGE_KEY, result);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Progress analysis failed. Please try again.");
     } finally {
@@ -311,8 +336,8 @@ export default function Pfe() {
                 </div>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" className="border-border"><MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Chat</Button>
-                <Button variant="outline" size="sm" className="border-border"><Mail className="mr-1.5 h-3.5 w-3.5" /> Email</Button>
+                <Button variant="outline" size="sm" className="border-border" disabled><MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Chat</Button>
+                <Button variant="outline" size="sm" className="border-border" disabled><Mail className="mr-1.5 h-3.5 w-3.5" /> Email</Button>
               </div>
             </CardContent>
           </Card>
@@ -360,7 +385,9 @@ export default function Pfe() {
                 </div>
                 <CardTitle className="text-base">Suggested projects</CardTitle>
               </div>
-              <Button variant="ghost" size="sm" className="text-accent hover:text-accent">See all matches</Button>
+              <Button variant="ghost" size="sm" className="text-accent hover:text-accent" disabled>
+                See all matches
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -381,7 +408,8 @@ export default function Pfe() {
 
             <div className="grid gap-3 md:grid-cols-2">
               {projectCards.map((p) => {
-                const match = computeStableMatch(p.id, readinessScore);
+                const diagMatchToken = p.id.startsWith("diag-") ? Number(p.id.split("-")[1]) : NaN;
+                const match = Number.isFinite(diagMatchToken) ? diagMatchToken : computeStableMatch(p.id, readinessScore);
 
                 return (
                   <div key={p.id} className="group rounded-xl border border-border bg-background p-4 transition-smooth hover:border-accent hover:shadow-md">
@@ -419,7 +447,7 @@ export default function Pfe() {
                       >
                         Select <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 border-border">
+                      <Button variant="outline" size="icon" className="h-9 w-9 shrink-0 border-border" disabled aria-label="Save project (coming soon)">
                         <Heart className="h-4 w-4" />
                       </Button>
                     </div>
@@ -550,6 +578,8 @@ export default function Pfe() {
                   </div>
                 </div>
               </div>
+            ) : !isSubmitting && !submitError ? (
+              <p className="text-sm text-muted-foreground">No progress feedback yet — fill the form and click <strong>Analyze progress</strong>.</p>
             ) : null}
           </CardContent>
         </Card>
