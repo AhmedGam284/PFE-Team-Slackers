@@ -20,6 +20,45 @@ import {
 import { studentJourney } from "@/lib/studentJourney";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/context/auth";
+import { useEffect, useState } from "react";
+import type { DiagnosisAnalyzeData } from "@/lib/apiContracts";
+import { loadFromStorage, STORAGE_KEYS } from "@/lib/storage";
+
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+
+const isTrackRecommendationArray = (
+  value: unknown,
+): value is Array<{ title: string; reason: string; matchScore: number }> =>
+  Array.isArray(value) &&
+  value.every((item) => {
+    if (typeof item !== "object" || item === null) return false;
+    const record = item as Record<string, unknown>;
+    return (
+      typeof record.title === "string" &&
+      typeof record.reason === "string" &&
+      typeof record.matchScore === "number" &&
+      Number.isFinite(record.matchScore)
+    );
+  });
+
+const isDiagnosisAnalyzeData = (value: unknown): value is DiagnosisAnalyzeData => {
+  if (typeof value !== "object" || value === null) return false;
+
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.readinessScore === "number" &&
+    Number.isFinite(record.readinessScore) &&
+    isStringArray(record.strengths) &&
+    isStringArray(record.skillGaps) &&
+    isTrackRecommendationArray(record.recommendedPfeTracks) &&
+    isStringArray(record.recommendedNextSteps) &&
+    typeof record.mentorAdvice === "string"
+  );
+};
+
+const readinessLevelFromScore = (score: number) =>
+  score >= 85 ? "Advanced" : score >= 70 ? "Strong" : "Developing";
 
 const tasks = [
   { title: "Finalize PFE problem statement", due: "Today", priority: "high", done: false },
@@ -30,10 +69,26 @@ const tasks = [
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [savedDiagnosis, setSavedDiagnosis] = useState<DiagnosisAnalyzeData | null>(null);
+
+  useEffect(() => {
+    setSavedDiagnosis(
+      loadFromStorage<DiagnosisAnalyzeData>(STORAGE_KEYS.diagnosis, {
+        validate: isDiagnosisAnalyzeData,
+        removeIfInvalid: true,
+      }),
+    );
+  }, []);
 
   if (user?.role === "mentor") {
     return <Navigate to="/mentor-dashboard" replace />;
   }
+
+  const readinessScore = savedDiagnosis?.readinessScore ?? studentJourney.readinessScore;
+  const readinessLevel = savedDiagnosis ? readinessLevelFromScore(readinessScore) : studentJourney.readinessLevel;
+  const mentorAdvice = savedDiagnosis?.mentorAdvice;
+  const firstTrackTitle = savedDiagnosis?.recommendedPfeTracks?.[0]?.title;
+  const firstNextStep = savedDiagnosis?.recommendedNextSteps?.[0];
 
   return (
     <AppLayout>
@@ -41,7 +96,7 @@ export default function Dashboard() {
         {/* Welcome */}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground md:text-3xl">Welcome back, Sara 👋</h1>
+            <h1 className="text-2xl font-bold text-foreground md:text-3xl">Welcome back, {user?.name ?? "Student"} 👋</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Tracking from Year 1 to PFE with a unified academic score and mentor guidance.
             </p>
@@ -74,11 +129,32 @@ export default function Dashboard() {
                 <Badge className="border-0 bg-accent/20 text-accent">AI</Badge>
               </div>
               <p className="mt-3 text-4xl font-bold">
-                {studentJourney.readinessScore}
+                {readinessScore}
                 <span className="text-2xl opacity-60">/100</span>
               </p>
-              <Progress value={studentJourney.readinessScore} className="mt-4 h-2 bg-white/10" />
-              <p className="mt-2 text-xs opacity-70">Level: {studentJourney.readinessLevel}</p>
+              <Progress value={readinessScore} className="mt-4 h-2 bg-white/10" />
+              <p className="mt-2 text-xs opacity-70">Level: {readinessLevel}</p>
+
+              {savedDiagnosis ? (
+                <div className="mt-4 space-y-2 rounded-xl bg-white/10 p-3 text-xs backdrop-blur-sm">
+                  <div>
+                    <p className="font-semibold opacity-90">Mentor advice</p>
+                    <p className="mt-1 opacity-80">{mentorAdvice}</p>
+                  </div>
+
+                  {firstTrackTitle ? (
+                    <p className="opacity-80">
+                      <span className="font-semibold opacity-90">Track:</span> {firstTrackTitle}
+                    </p>
+                  ) : null}
+
+                  {firstNextStep ? (
+                    <p className="opacity-80">
+                      <span className="font-semibold opacity-90">Next step:</span> {firstNextStep}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </CardContent>
           </Card>
 
